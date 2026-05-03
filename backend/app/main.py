@@ -9,7 +9,11 @@ from app.api import health, sources, reports, events, stats, pipeline
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    import threading
+    from app.collectors.telegram_collector import run_collector
     logger.info("Starting Incident Radar API...")
+    t = threading.Thread(target=run_collector, daemon=True)
+    t.start()
     yield
     logger.info("Shutting down...")
 
@@ -35,3 +39,4 @@ app.include_router(reports.router, prefix="/raw-reports", tags=["raw-reports"])
 app.include_router(events.router, prefix="/events", tags=["events"])
 app.include_router(stats.router, prefix="/stats", tags=["stats"])
 app.include_router(pipeline.router, prefix="/pipeline", tags=["pipeline"])
+
