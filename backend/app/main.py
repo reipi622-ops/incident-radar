@@ -14,7 +14,11 @@ async def lifespan(app: FastAPI):
     import asyncio
     logger.info("Starting Incident Radar API...")
     def start_collector():
-        asyncio.run(build_telegram_collectors())
+        collectors = build_telegram_collectors()
+        async def run_all():
+            import asyncio
+            await asyncio.gather(*[c.collect() for c in collectors])
+        asyncio.run(run_all())
     t = threading.Thread(target=start_collector, daemon=True)
     t.start()
     yield
@@ -42,5 +46,6 @@ app.include_router(reports.router, prefix="/raw-reports", tags=["raw-reports"])
 app.include_router(events.router, prefix="/events", tags=["events"])
 app.include_router(stats.router, prefix="/stats", tags=["stats"])
 app.include_router(pipeline.router, prefix="/pipeline", tags=["pipeline"])
+
 
 
