@@ -16,3 +16,5 @@ pytest-asyncio==0.23.6
 factory-boy==3.3.0
 
 telethon==1.36.0
+
+telethon==1.36.0
