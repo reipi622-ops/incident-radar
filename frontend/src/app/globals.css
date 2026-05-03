@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Leaflet CSS */
+@import "leaflet/dist/leaflet.css";
+
+:root {
+  --radar-red: #ef4444;
+  --radar-orange: #f97316;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Dark map tiles override */
+.leaflet-tile {
+  filter: brightness(0.85) saturate(0.8);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #111827; }
+::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+
+/* Card base */
+.radar-card {
+  @apply bg-gray-900 border border-gray-800 rounded-xl;
+}

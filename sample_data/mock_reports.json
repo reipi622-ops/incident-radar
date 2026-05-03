@@ -1,0 +1,42 @@
+[
+  {
+    "id": "r001",
+    "timestamp": "2024-03-15T08:20:00",
+    "url": "https://example.co.il/1001",
+    "language": "he",
+    "text": "שריפה פרצה בבניין מגורים ברחוב הרצל 14 תל אביב. 3 פצועים פונו לאיכילוב.",
+    "media": [{"url": "https://example.co.il/img/fire1.jpg", "type": "image", "caption": "זירת השריפה"}]
+  },
+  {
+    "id": "r002",
+    "timestamp": "2024-03-15T08:47:00",
+    "url": "https://other.co.il/2001",
+    "language": "he",
+    "text": "עדכון: שריפה רחוב הרצל תל אביב — מספר הפצועים עלה ל-5. שניים במצב קשה.",
+    "media": [{"url": "https://other.co.il/vid/fire_update.mp4", "type": "video", "caption": "עדכון מהזירה"}]
+  },
+  {
+    "id": "r003",
+    "timestamp": "2024-03-15T09:10:00",
+    "url": "https://example.co.il/1003",
+    "language": "he",
+    "text": "תאונת דרכים בכביש 1 ליד שפיים. 2 הרוגים, 4 פצועים.",
+    "media": []
+  },
+  {
+    "id": "r004",
+    "timestamp": "2024-03-15T09:35:00",
+    "url": "https://traffic.co.il/4001",
+    "language": "he",
+    "text": "כביש 1 חסום ליד שפיים לאחר תאונה קשה. 2 נהרגו במקום. מד\"א בשטח.",
+    "media": [{"url": "https://traffic.co.il/img/road1.jpg", "type": "image", "caption": "זירת התאונה"}]
+  },
+  {
+    "id": "r005",
+    "timestamp": "2024-03-15T10:05:00",
+    "url": "https://example.co.il/1005",
+    "language": "he",
+    "text": "פיצוץ בתחנת דלק בחיפה, רחוב חורב. 6 פצועים, 2 מהם בשריפות.",
+    "media": [{"url": "https://example.co.il/img/explosion.jpg", "type": "image", "caption": "פיצוץ בחיפה"}]
+  }
+]
