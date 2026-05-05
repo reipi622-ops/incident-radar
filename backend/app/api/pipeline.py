@@ -104,3 +104,4 @@ async def run_telegram(db: Session = Depends(get_db)):
     collector = TelegramChannelCollector(db)
     result = asyncio.run(collector.collect())
     return PipelineResult(success=True, processed=result.get('saved', 0), errors=0, details=f'telegram:saved={result.get("saved", 0)}')
+
