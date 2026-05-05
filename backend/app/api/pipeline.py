@@ -101,7 +101,8 @@ def run_all(db: Session = Depends(get_db)):
 async def run_telegram(db: Session = Depends(get_db)):
     from app.collectors.telegram_collector import TelegramChannelCollector
     
-    collector = TelegramChannelCollector(db)
+    import os`n    api_id = os.environ.get("TELEGRAM_API_ID", "30786161")`n    api_hash = os.environ.get("TELEGRAM_API_HASH", "d728363dd4c2b04a7a9338a1c48e88a8")`n    collector = TelegramChannelCollector(db, api_id=api_id, api_hash=api_hash)
     result = await collector.collect()
     return PipelineResult(success=True, processed=result.get('saved', 0), errors=0, details=f'telegram:saved={result.get("saved", 0)}')
+
 
