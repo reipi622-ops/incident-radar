@@ -96,3 +96,11 @@ def run_all(db: Session = Depends(get_db)):
             f"geo:resolved={g['resolved']}"
         ),
     )
+
+@router.post('/telegram/run', response_model=PipelineResult)
+async def run_telegram(db: Session = Depends(get_db)):
+    from app.collectors.telegram_collector import TelegramCollector
+    import asyncio
+    collector = TelegramCollector(db)
+    result = asyncio.run(collector.collect())
+    return PipelineResult(success=True, processed=result.get('saved', 0), errors=0, details=f'telegram:saved={result.get("saved", 0)}')
