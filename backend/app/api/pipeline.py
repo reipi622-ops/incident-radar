@@ -100,8 +100,8 @@ def run_all(db: Session = Depends(get_db)):
 @router.post('/telegram/run', response_model=PipelineResult)
 async def run_telegram(db: Session = Depends(get_db)):
     from app.collectors.telegram_collector import TelegramChannelCollector
-    import asyncio
+    
     collector = TelegramChannelCollector(db)
-    result = asyncio.run(collector.collect())
+    result = await collector.collect()
     return PipelineResult(success=True, processed=result.get('saved', 0), errors=0, details=f'telegram:saved={result.get("saved", 0)}')
 
