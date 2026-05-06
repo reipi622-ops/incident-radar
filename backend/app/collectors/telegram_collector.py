@@ -20,7 +20,10 @@ class TelegramChannelCollector(BaseCollector):
         try:from telethon import TelegramClient
         except:logger.error("pip install telethon");return[]
         items=[]
-        async with TelegramClient(self._session,self._id,self._hash) as c:
+       from telethon.sessions import StringSession
+import os
+session = StringSession(os.environ.get('TG_SESSION', self._session))
+async with TelegramClient(session, self._id, self._hash) as c:
             try:e=await c.get_entity(self._ch)
             except Exception as ex:logger.error(f"TG entity {ex}");return[]
             from datetime import timezone
