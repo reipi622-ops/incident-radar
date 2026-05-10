@@ -41,6 +41,7 @@ class TelegramChannelCollector(BaseCollector):
     async def collect(self) -> List[RawItem]:
         try:
             from telethon import TelegramClient
+            from telethon.tl.types import Message
         except ImportError:
             logger.error("pip install telethon")
             return []
@@ -50,6 +51,8 @@ class TelegramChannelCollector(BaseCollector):
             async with TelegramClient(self._session, self.api_id, self.api_hash) as c:
                 async for m in c.iter_messages(self._ch, limit=self._limit):
                     try:
+                        if not isinstance(m, Message):
+                            continue
                         if not m.text:
                             continue
                         ts = m.date.replace(tzinfo=timezone.utc)
