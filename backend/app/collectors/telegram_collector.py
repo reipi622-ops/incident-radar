@@ -1,5 +1,4 @@
 ﻿import os
-import base64
 import tempfile
 from typing import List
 from datetime import datetime, timezone
@@ -15,10 +14,12 @@ def _lang(s):
 
 
 def _get_session_path():
-    b64 = os.getenv("TELEGRAM_SESSION_B64", "")
-    if not b64:
+    part1 = os.getenv("TELEGRAM_SESSION_1", "")
+    part2 = os.getenv("TELEGRAM_SESSION_2", "")
+    if not part1:
         return "tmp/tg"
-    data = base64.b64decode(b64)
+    import base64
+    data = base64.b64decode(part1 + part2)
     tmp = tempfile.NamedTemporaryFile(suffix=".session", delete=False)
     tmp.write(data)
     tmp.close()
