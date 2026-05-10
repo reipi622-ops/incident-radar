@@ -1,4 +1,6 @@
 ﻿import os
+import base64
+import tempfile
 from typing import List
 from datetime import datetime, timezone
 from loguru import logger
@@ -12,13 +14,24 @@ def _lang(s):
     return "ar" if ar > he else "he"
 
 
+def _get_session_path():
+    b64 = os.getenv("TELEGRAM_SESSION_B64", "")
+    if not b64:
+        return "tmp/tg"
+    data = base64.b64decode(b64)
+    tmp = tempfile.NamedTemporaryFile(suffix=".session", delete=False)
+    tmp.write(data)
+    tmp.close()
+    return tmp.name.replace(".session", "")
+
+
 class TelegramChannelCollector(BaseCollector):
-    def __init__(self, channel, api_id, api_hash, limit=50, session="tmp/tg"):
+    def __init__(self, channel, api_id, api_hash, limit=50):
         self._ch = channel
         self.api_id = int(api_id)
         self.api_hash = api_hash
         self._limit = limit
-        self._session = session
+        self._session = _get_session_path()
 
     @property
     def source_name(self):
