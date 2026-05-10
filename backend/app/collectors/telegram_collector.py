@@ -1,5 +1,4 @@
 ﻿import os
-import asyncio
 from typing import List
 from datetime import datetime, timezone
 from loguru import logger
@@ -22,7 +21,7 @@ class TelegramChannelCollector(BaseCollector):
         self._session = session
 
     @property
-    def name(self):
+    def source_name(self):
         return f"Telegram({self._ch})"
 
     async def collect(self) -> List[RawItem]:
@@ -42,7 +41,7 @@ class TelegramChannelCollector(BaseCollector):
                         ts = m.date.replace(tzinfo=timezone.utc)
                         items.append(RawItem(
                             external_id=f"{self._ch}/{m.id}",
-                            source_name=self.name,
+                            source_name=self.source_name,
                             source_url=f"https://t.me/{self._ch}/{m.id}",
                             raw_text=m.text,
                             raw_timestamp=ts,
