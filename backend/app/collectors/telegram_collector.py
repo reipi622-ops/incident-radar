@@ -77,5 +77,10 @@ class TelegramChannelCollector(BaseCollector):
 def build_telegram_collectors() -> List[TelegramChannelCollector]:
     api_id = os.getenv("TELEGRAM_API_ID", "")
     api_hash = os.getenv("TELEGRAM_API_HASH", "")
-    channels = [c.strip() for c in os.getenv("TELEGRAM_CHANNELS", "").split(",") if c.strip()]
+    raw = os.getenv("TELEGRAM_CHANNELS", "").replace(";", ",").replace("\n", ",").replace("\r", ",")
+    channels = [c.strip().lstrip("@") for c in raw.split(",") if c.strip()]
+    if not api_id or not api_hash or not channels:
+        logger.warning("Telegram not configured — set TELEGRAM_API_ID, TELEGRAM_API_HASH, TELEGRAM_CHANNELS")
+        return []
+    logger.info(f"Building collectors for {len(channels)} channels: {channels}")
     return [TelegramChannelCollector(ch, api_id, api_hash) for ch in channels]

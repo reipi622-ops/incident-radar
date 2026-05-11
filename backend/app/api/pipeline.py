@@ -99,16 +99,54 @@ def run_all(db: Session = Depends(get_db)):
 
 @router.post("/telegram/run", response_model=PipelineResult)
 async def run_telegram(db: Session = Depends(get_db)):
+    import asyncio
+    import hashlib
+    from datetime import datetime
     from app.collectors.telegram_collector import build_telegram_collectors
+    from app.collectors.service import _get_or_create_source
+    from app.models.models import RawReport, Source, SourceType
+
     collectors = build_telegram_collectors()
     if not collectors:
         return PipelineResult(success=False, processed=0, errors=1, details="No TELEGRAM_CHANNELS configured")
-    total = 0
-    for c in collectors:
-        try:
-            items = await c._run()
-            total += len(items)
-        except Exception:
-            pass
-    return PipelineResult(success=True, processed=total, errors=0, details=f"telegram:saved={total}")
+
+    results = await asyncio.gather(*[c.collect() for c in collectors], return_exceptions=True)
+
+    saved = skipped = errors = 0
+    for r in results:
+        if isinstance(r, Exception):
+            errors += 1
+            continue
+        for item in (r or []):
+            try:
+                content_hash = hashlib.sha256(item.raw_text.encode()).hexdigest()
+                source = _get_or_create_source(db, item.source_name, SourceType.api)
+                if db.query(RawReport).filter(
+                    RawReport.source_id == source.id,
+                    RawReport.content_hash == content_hash,
+                ).first():
+                    skipped += 1
+                    continue
+                db.add(RawReport(
+                    source_id=source.id,
+                    external_id=item.external_id,
+                    source_url=item.source_url,
+                    raw_text=item.raw_text,
+                    raw_timestamp=item.raw_timestamp,
+                    collected_at=datetime.utcnow(),
+                    media_json=item.media_items or None,
+                    language=item.language,
+                    content_hash=content_hash,
+                    is_parsed=False,
+                ))
+                saved += 1
+            except Exception:
+                errors += 1
+    db.commit()
+    return PipelineResult(
+        success=errors == 0,
+        processed=saved + skipped,
+        errors=errors,
+        details=f"telegram:saved={saved} skipped={skipped}",
+    )
 
