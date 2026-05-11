@@ -1,5 +1,4 @@
 ﻿import os
-import tempfile
 from typing import List
 from datetime import datetime, timezone
 from loguru import logger
@@ -13,26 +12,29 @@ def _lang(s):
     return "ar" if ar > he else "he"
 
 
-def _get_session_path():
-    part1 = os.getenv("TELEGRAM_SESSION_1", "")
-    part2 = os.getenv("TELEGRAM_SESSION_2", "")
-    if not part1:
-        return "tmp/tg"
-    import base64
-    data = base64.b64decode(part1 + part2)
-    tmp = tempfile.NamedTemporaryFile(suffix=".session", delete=False)
-    tmp.write(data)
-    tmp.close()
-    return tmp.name.replace(".session", "")
+def _get_string_session() -> str:
+    """Return a Telethon StringSession string from env vars.
+
+    Supports two env var layouts:
+      TELEGRAM_STRING_SESSION=<full session>          (preferred)
+      TELEGRAM_SESSION_1=<first half>                 (legacy split for Railway's 512-char limit)
+      TELEGRAM_SESSION_2=<second half>
+    """
+    s = os.getenv("TELEGRAM_STRING_SESSION", "").strip()
+    if s:
+        return s
+    part1 = os.getenv("TELEGRAM_SESSION_1", "").strip()
+    part2 = os.getenv("TELEGRAM_SESSION_2", "").strip()
+    return part1 + part2
 
 
 class TelegramChannelCollector(BaseCollector):
-    def __init__(self, channel, api_id, api_hash, limit=50):
+    def __init__(self, channel, api_id, api_hash, string_session: str = "", limit=50):
         self._ch = channel
         self.api_id = int(api_id)
         self.api_hash = api_hash
+        self._string_session = string_session
         self._limit = limit
-        self._session = _get_session_path()
 
     @property
     def source_name(self):
@@ -41,14 +43,21 @@ class TelegramChannelCollector(BaseCollector):
     async def collect(self) -> List[RawItem]:
         try:
             from telethon import TelegramClient
+            from telethon.sessions import StringSession
             from telethon.tl.types import Message
         except ImportError:
             logger.error("pip install telethon")
             return []
 
+        if not self._string_session:
+            logger.error(f"TG({self._ch}) no session string \u2014 set TELEGRAM_STRING_SESSION")
+            return []
+
         items = []
         try:
-            async with TelegramClient(self._session, self.api_id, self.api_hash) as c:
+            async with TelegramClient(
+                StringSession(self._string_session), self.api_id, self.api_hash
+            ) as c:
                 async for m in c.iter_messages(self._ch, limit=self._limit):
                     try:
                         if not isinstance(m, Message):
@@ -66,10 +75,10 @@ class TelegramChannelCollector(BaseCollector):
                             language=_lang(m.text),
                         ))
                     except Exception as e:
-                        logger.error(f"TG entity {e}")
+                        logger.error(f"TG({self._ch}) message skip: {e}")
                         continue
         except Exception as e:
-            logger.error(f"TG({self._ch}) {e}")
+            logger.error(f"TG({self._ch}) collect error: {e}")
 
         return items
 
@@ -77,10 +86,14 @@ class TelegramChannelCollector(BaseCollector):
 def build_telegram_collectors() -> List[TelegramChannelCollector]:
     api_id = os.getenv("TELEGRAM_API_ID", "")
     api_hash = os.getenv("TELEGRAM_API_HASH", "")
+    string_session = _get_string_session()
     raw = os.getenv("TELEGRAM_CHANNELS", "").replace(";", ",").replace("\n", ",").replace("\r", ",")
     channels = [c.strip().lstrip("@") for c in raw.split(",") if c.strip()]
     if not api_id or not api_hash or not channels:
         logger.warning("Telegram not configured — set TELEGRAM_API_ID, TELEGRAM_API_HASH, TELEGRAM_CHANNELS")
         return []
+    if not string_session:
+        logger.warning("Telegram session missing — set TELEGRAM_STRING_SESSION (or TELEGRAM_SESSION_1/2)")
+        return []
     logger.info(f"Building collectors for {len(channels)} channels: {channels}")
-    return [TelegramChannelCollector(ch, api_id, api_hash) for ch in channels]
+    return [TelegramChannelCollector(ch, api_id, api_hash, string_session) for ch in channels]
