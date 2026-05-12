@@ -82,6 +82,16 @@ _LOCATION_RE = [
     ),
     # ב + any Hebrew word(s) -- broad fallback
     re.compile(r'\bב([א-ת]{2,15}(?:\s[א-ת]{2,15}){0,2})\b', re.UNICODE),
+    # Arabic: في (fi/in) + location
+    re.compile(
+        r'[في]\s+([\u0600-\u06ff]{2,20}(?:\s[\u0600-\u06ff]{2,20}){0,2})',
+        re.UNICODE
+    ),
+    # Arabic city names standalone
+    re.compile(
+        r'(?:جنين|نابلس|رام الله|الخليل|طولكرم|قلقيلية|حيفا|غزة|القدس|أريحا)',
+        re.UNICODE
+    ),
 ]
 
 # Time patterns
@@ -232,22 +242,59 @@ class IncidentParser:
         return None
 
     def _extract_location(self, text: str) -> Optional[str]:
-        # Try rich patterns first (with context words)
-        for pat in _LOCATION_RE[:1]:
-            m = pat.search(text)
-            if m:
-                loc = m.group(1).strip().rstrip(".")
-                if len(loc) >= 2:
-                    return loc
+        # Pattern 1: ב + context word + location name (has capture group)
+        m = _LOCATION_RE[0].search(text)
+        if m:
+            loc = m.group(1).strip().rstrip(".")
+            if len(loc) >= 2:
+                logger.debug(f"loc pat1: {loc!r}")
+                return loc
 
-        # Try city name patterns
-        for pat in _LOCATION_RE[1:]:
+        # Patterns 2-3: known city names (no capture group)
+        for pat in _LOCATION_RE[1:3]:
             m = pat.search(text)
             if m:
-                # Strip leading ב
                 loc = m.group(0).lstrip("ב").strip()
                 if loc:
+                    logger.debug(f"loc pat2/3: {loc!r}")
                     return loc
+
+        # Pattern 4: ב + any Hebrew word(s) (has capture group)
+        m = _LOCATION_RE[3].search(text)
+        if m:
+            loc = m.group(1).strip()
+            if len(loc) >= 2:
+                logger.debug(f"loc pat4: {loc!r}")
+                return loc
+
+        # Pattern 5: Arabic في + location (has capture group)
+        m = _LOCATION_RE[4].search(text)
+        if m:
+            loc = m.group(1).strip()
+            if len(loc) >= 2:
+                logger.debug(f"loc arabic-fi: {loc!r}")
+                return loc
+
+        # Pattern 6: Arabic city names standalone (no capture group)
+        m = _LOCATION_RE[5].search(text)
+        if m:
+            loc = m.group(0).strip()
+            if loc:
+                logger.debug(f"loc arabic-city: {loc!r}")
+                return loc
+
+        # Fallback: Hebrew/Arabic words after separator | — : –
+        sep = re.search(
+            r"[|—–\-:] *([\u0590-\u05ff\u0600-\u06ff][\u0590-\u05ff\u0600-\u06ff\s]{1,30})",
+            text, re.UNICODE
+        )
+        if sep:
+            loc = sep.group(1).strip()
+            if len(loc) >= 2:
+                logger.debug(f"loc sep: {loc!r}")
+                return loc
+
+        logger.debug(f"loc: no match in {text[:80]!r}")
         return None
 
     def _extract_time_text(self, text: str) -> Optional[str]:
