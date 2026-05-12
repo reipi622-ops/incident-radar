@@ -108,6 +108,37 @@ def _compute_confidence(location) -> float:
     return min(confidence, 1.0)
 
 
+
+# ── Static location lookup (high-confidence, no API call needed) ──────────────
+
+SOUTH_LEBANON_LOCATIONS: dict[str, tuple[float, float]] = {
+    "النبطية":    (33.3489, 35.4839),
+    "نبطية":      (33.3489, 35.4839),
+    "بنت جبيل":  (33.1197, 35.4333),
+    "صور":        (33.2705, 35.2037),
+    "القليعة":   (33.2833, 35.5167),
+    "قليعة":     (33.2833, 35.5167),
+    "مارون الراس": (33.0833, 35.4333),
+    "عيتا الشعب": (33.1167, 35.4167),
+    "عيترون":    (33.1333, 35.4500),
+    "يارون":     (33.1000, 35.4167),
+    "علما الشعب": (33.1167, 35.2167),
+    "رميش":      (33.0833, 35.3833),
+    "عيناتا":    (33.2000, 35.4167),
+    "حاصبيا":    (33.3833, 35.6833),
+    "مرجعيون":   (33.3667, 35.5833),
+    "خيام":      (33.3167, 35.5833),
+    "كفركلا":    (33.1167, 35.5500),
+    "ميس الجبل": (33.1500, 35.5167),
+    "بليدا":     (33.1667, 35.4333),
+    "شقرا":      (33.2667, 35.5333),
+    "تبنين":     (33.1833, 35.4167),
+    "قانا":      (33.2000, 35.3000),
+    "صيدا":      (33.5600, 35.3700),
+    "صيدون":     (33.5600, 35.3700),
+}
+
+
 # ── Public geocoding service ──────────────────────────────────────────────────
 
 _provider: GeocodingProvider = NominatimProvider()
@@ -116,10 +147,24 @@ _provider: GeocodingProvider = NominatimProvider()
 def geocode_location(query: str) -> Optional[GeoResult]:
     """
     Geocode a location string.
+    Checks the static South Lebanon lookup table before calling Nominatim.
     Returns None if confidence is below minimum threshold or geocoding fails.
     """
     if not query:
         return None
+
+    # Static lookup — instant, no rate-limit
+    query_stripped = query.strip()
+    if query_stripped in SOUTH_LEBANON_LOCATIONS:
+        lat, lng = SOUTH_LEBANON_LOCATIONS[query_stripped]
+        logger.debug(f"Static lookup hit: {query_stripped!r} → ({lat}, {lng})")
+        return GeoResult(
+            latitude=lat,
+            longitude=lng,
+            confidence=0.95,
+            resolved_address=query_stripped,
+            query=query_stripped,
+        )
 
     result = _provider.geocode(query)
 
