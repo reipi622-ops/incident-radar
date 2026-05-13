@@ -131,7 +131,7 @@ class ClaudeGeocodingProvider(GeocodingProvider):
             logger.warning("ANTHROPIC_API_KEY not set — Claude geocoding disabled")
             return None
         try:
-            import anthropic, json
+            import anthropic, json, re
             client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
             message = client.messages.create(
                 model="claude-haiku-4-5-20251001",
@@ -142,10 +142,15 @@ class ClaudeGeocodingProvider(GeocodingProvider):
                 }],
             )
             raw = message.content[0].text.strip()
-            data = json.loads(raw)
+            logger.info(f"Claude raw response for {query!r}: {raw!r}")
+
+            # Strip markdown code fences if present
+            clean = re.sub(r"^```[a-z]*\s*|\s*```$", "", raw, flags=re.DOTALL).strip()
+
+            data = json.loads(clean)
             lat = float(data["lat"])
             lon = float(data["lon"])
-            logger.debug(f"Claude geocoded {query!r} → ({lat}, {lon})")
+            logger.info(f"Claude geocoded {query!r} → ({lat}, {lon})")
             return GeoResult(
                 latitude=lat,
                 longitude=lon,
@@ -154,7 +159,7 @@ class ClaudeGeocodingProvider(GeocodingProvider):
                 query=query,
             )
         except Exception as e:
-            logger.error(f"Claude geocoding failed for {query!r}: {e}")
+            logger.error(f"Claude geocoding failed for {query!r}: {e}", exc_info=True)
             return None
 
 
