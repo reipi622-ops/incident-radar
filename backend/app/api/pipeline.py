@@ -7,7 +7,7 @@ from app.collectors.local_json import LocalJsonCollector
 from app.collectors.service import run_collector
 from app.parsers.service import run_parser
 from app.dedup.service import run_dedup
-from app.geocoding.runner import run_geocoding
+from app.geocoding.runner import run_geocoding, run_claude_geocoding
 from app.schemas.schemas import PipelineResult
 
 router = APIRouter()
@@ -66,6 +66,18 @@ def dedup_run(db: Session = Depends(get_db)):
 def geocode_run(db: Session = Depends(get_db)):
     """Geocode events that have location_text but missing coordinates."""
     result = run_geocoding(db)
+    return PipelineResult(
+        success=True,
+        processed=result["processed"],
+        errors=0,
+        details=f"resolved={result['resolved']} failed={result['failed']}",
+    )
+
+
+@router.post("/geocode/claude/run", response_model=PipelineResult)
+def geocode_claude_run(db: Session = Depends(get_db)):
+    """Geocode unresolved events using the Claude API."""
+    result = run_claude_geocoding(db)
     return PipelineResult(
         success=True,
         processed=result["processed"],

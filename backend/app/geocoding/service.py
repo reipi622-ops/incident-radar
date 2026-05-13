@@ -109,6 +109,55 @@ def _compute_confidence(location) -> float:
 
 
 
+# ── Claude geocoding provider ─────────────────────────────────────────────────
+
+class ClaudeGeocodingProvider(GeocodingProvider):
+    """
+    Uses Claude API to geocode locations that Nominatim can't resolve.
+    Best for Arabic village names in South Lebanon / West Bank.
+    """
+
+    _PROMPT = (
+        "You are a precise geocoding assistant. "
+        "Return ONLY a valid JSON object — no explanation, no markdown — with the "
+        "latitude and longitude of this location: \"{location}\"\n"
+        "Format: {{\"lat\": 33.1197, \"lon\": 35.4333}}\n"
+        "If you are not confident, still return your best estimate. "
+        "Never return null values."
+    )
+
+    def geocode(self, query: str) -> Optional[GeoResult]:
+        if not settings.ANTHROPIC_API_KEY:
+            logger.warning("ANTHROPIC_API_KEY not set — Claude geocoding disabled")
+            return None
+        try:
+            import anthropic, json
+            client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+            message = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=64,
+                messages=[{
+                    "role": "user",
+                    "content": self._PROMPT.format(location=query),
+                }],
+            )
+            raw = message.content[0].text.strip()
+            data = json.loads(raw)
+            lat = float(data["lat"])
+            lon = float(data["lon"])
+            logger.debug(f"Claude geocoded {query!r} → ({lat}, {lon})")
+            return GeoResult(
+                latitude=lat,
+                longitude=lon,
+                confidence=0.80,
+                resolved_address=query,
+                query=query,
+            )
+        except Exception as e:
+            logger.error(f"Claude geocoding failed for {query!r}: {e}")
+            return None
+
+
 # ── Static location lookup (high-confidence, no API call needed) ──────────────
 
 SOUTH_LEBANON_LOCATIONS: dict[str, tuple[float, float]] = {

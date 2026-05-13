@@ -10,7 +10,7 @@ from loguru import logger
 from sqlalchemy.orm import Session
 
 from app.models.models import Event
-from app.geocoding.service import geocode_location
+from app.geocoding.service import geocode_location, ClaudeGeocodingProvider
 
 
 def run_geocoding(db: Session, batch_size: int = 30) -> dict:
@@ -76,4 +76,47 @@ def run_geocoding(db: Session, batch_size: int = 30) -> dict:
 
     db.commit()
     logger.info(f"Geocoding run: candidates={len(candidates)} resolved={resolved} failed={failed}")
+    return {"processed": len(candidates), "resolved": resolved, "failed": failed}
+
+
+def run_claude_geocoding(db: Session, batch_size: int = 50) -> dict:
+    """
+    Geocode events that still have no coordinates using the Claude API.
+    Targets events where Nominatim already failed (geocode_query IS NOT NULL
+    but latitude IS NULL) as well as events never attempted.
+    """
+    candidates = (
+        db.query(Event)
+        .filter(
+            Event.location_text.isnot(None),
+            Event.latitude.is_(None),
+        )
+        .order_by(Event.created_at)
+        .limit(batch_size)
+        .all()
+    )
+
+    if not candidates:
+        logger.info("Claude geocoding: no events need geocoding.")
+        return {"processed": 0, "resolved": 0, "failed": 0}
+
+    logger.info(f"Claude geocoding: {len(candidates)} events to process")
+    provider = ClaudeGeocodingProvider()
+    resolved = 0
+    failed = 0
+
+    for event in candidates:
+        result = provider.geocode(event.location_text)
+        if result:
+            event.latitude = result.latitude
+            event.longitude = result.longitude
+            event.geocode_confidence = result.confidence
+            event.geocode_query = result.query
+            resolved += 1
+        else:
+            event.geocode_query = event.location_text  # mark as attempted
+            failed += 1
+
+    db.commit()
+    logger.info(f"Claude geocoding run: resolved={resolved} failed={failed}")
     return {"processed": len(candidates), "resolved": resolved, "failed": failed}

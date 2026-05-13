@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     DEDUP_LOCATION_RADIUS_KM: float = 10.0
     DEDUP_MIN_SCORE: float = 0.6
 
+    # Claude API
+    ANTHROPIC_API_KEY: str = ""
+
     # Logging
     LOG_LEVEL: str = "INFO"
 
