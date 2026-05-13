@@ -127,12 +127,14 @@ class ClaudeGeocodingProvider(GeocodingProvider):
     )
 
     def geocode(self, query: str) -> Optional[GeoResult]:
-        if not settings.ANTHROPIC_API_KEY:
+        import os
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+        if not api_key:
             logger.warning("ANTHROPIC_API_KEY not set — Claude geocoding disabled")
             return None
         try:
             import anthropic, json, re
-            client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+            client = anthropic.Anthropic(api_key=api_key)
             message = client.messages.create(
                 model="claude-haiku-4-5-20251001",
                 max_tokens=64,
